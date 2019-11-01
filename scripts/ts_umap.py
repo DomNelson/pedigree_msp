@@ -38,6 +38,7 @@ def get_prefix(args):
 
 def main(args):
     out_dir = os.path.expanduser(args.output_dir)
+    ts_file = os.path.expanduser(args.ts_file)
     ts_time = os.path.getmtime(args.ts_file)
 
     prefix = get_prefix(args)
@@ -81,25 +82,18 @@ def main(args):
 
     print("Running UMAP")
     umap_file = prefix + '_umap.npy'
-    if (not os.path.exists(umap_file) or
-            os.path.getmtime(umap_file) < pca_time):
-        data = np.genfromtxt(evecs_file)
-        IDs, evecs = data[:, :2], data[:, 2:]
+    data = np.genfromtxt(evecs_file)
+    IDs, evecs = data[:, :2], data[:, 2:]
 
-        embedding = umap.UMAP(n_neighbors=5,
-                              min_dist=0.3).fit_transform(evecs)
-        np.save(umap_file, embedding)
-    else:
-        print("Using existing UMAP file:", umap_file)
-    umap_time = os.path.getmtime(umap_file)
+    embedding = umap.UMAP(n_neighbors=5,
+                          min_dist=0.1).fit_transform(evecs)
+    np.save(umap_file, embedding)
 
     print("Plotting")
     plot_file = prefix + '_umap.png'
-    if (not os.path.exists(plot_file) or
-            os.path.getmtime(plot_file) < umap_time):
-        fig, ax = plt.subplots()
-        ax.scatter(embedding[:, 0], embedding[:, 1], s=1)
-        fig.savefig(plot_file)
+    fig, ax = plt.subplots()
+    ax.scatter(embedding[:, 0], embedding[:, 1], s=1)
+    fig.savefig(plot_file)
 
     if args.ipython:
         embed()
