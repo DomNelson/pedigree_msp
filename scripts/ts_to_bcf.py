@@ -3,6 +3,9 @@ import os
 import argparse
 import subprocess
 
+sys.path.append(os.path.expanduser('~/project/msprime'))
+import msprime
+
 
 class Runner:
     def __init__(self, args):
@@ -25,6 +28,18 @@ def ts_to_bcf_single(ts_file, out_file, runner):
     make_bcf_cmd = "tskit vcf --ploidy 2 {} | bcftools view -O b > {}".format(
             ts_file, out_file)
     runner.run(make_bcf_cmd)
+
+    ts = msprime.load(ts_file)
+    assert (ts.num_samples % 2 == 0)
+    num_samples = int(ts.num_samples / 2)
+    new_sample_ids_file = ".tmp_sample_ids.txt"
+    with open(new_sample_ids_file, 'w') as f:
+        for i in range(1, num_samples+1):
+            f.write('tsk_' + str(i) + '\n')
+    reheader_cmd = ("bcftools reheader --samples {} {} > tmp && "
+            "mv tmp {} && rm {}").format(
+            new_sample_ids_file, out_file, out_file, new_sample_ids_file)
+    runner.run(reheader_cmd)
 
 
 def bcf_convert_chrom(bcf_file, chrom_num, runner):
