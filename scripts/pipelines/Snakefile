@@ -1,66 +1,92 @@
 import os
 
-class WildcardList:
-    def __init__(self, string, wc, iterator):
-        self.output_string = string
-        self.output_list = [string.format(**{wc: x}) for x in iterator]
 
-def get_tree_files_str(outdir):
-    wc = 'chr_num'
-    fname = 'chr{chr_num}.h5'
-    out_str = os.path.join(os.path.expanduser(outdir), fname)
+def get_ts_command(outfile):
+    simulate_args = ['pedfile', 'samples', 'popsize', 'mu', 'length', 'rho']
+    arg_dict = {k: v for k, v in config.items() if k in simulate_args}
+    arg_dict['outfile'] = os.path.expanduser(outfile)
 
-    return wc, out_str
+    cmd = '"python ../pedigree_example.py'
+    for k, v in arg_dict.items():
+        cmd += ' --{} {}'.format(k, v)
+    cmd += '"'
+
+    return cmd
+
+def ts_filenames():
+    for chrom_num in chrom_nums:
+        yield os.path.join(out_dir, 'chr{}.h5'.format(chrom_num))
+
+def parallel_simulation_commands():
+    cmds = ''
+    for f in ts_filenames():
+        cmds += ' {}'.format(get_ts_command(f))
+
+    return cmds
 
 
 out_dir = os.path.expanduser(config['outdir'])
+chrom_nums = range(1, config['n_chroms'] + 1)
+tree_files = [os.path.join(out_dir, 'chr{}.h5').format(x) for x in chrom_nums]
+
 prefix = 'combined'
-
-tree_files_wc, tree_files_str = get_tree_files_str(out_dir)
-print(tree_files_str)
-tree_files_iter = range(config['n_chroms'])
-tree_files = WildcardList(tree_files_str, tree_files_wc, tree_files_iter)
-
 bcf_file = os.path.join(out_dir, prefix + '.bcf')
+config_file = os.path.join(out_dir, 'config.yaml')
 
-rule pca_and_umap:
-    input:
-        bcf_file
-    output:
-        # Plink output
+umap_output = [
+        os.path.join(out_dir, prefix + '_umap.npy'),
+        os.path.join(out_dir, prefix + '_umap.png'),
+        ]
+
+plink_output = [
         os.path.join(out_dir, prefix + '.eigenval'),
         os.path.join(out_dir, prefix + '.eigenvec'),
         os.path.join(out_dir, prefix + '.log'),
         os.path.join(out_dir, prefix + '.nosex'),
+        ]
 
-        # UMAP output
-        os.path.join(out_dir, prefix + '_umap.npy'),
-        os.path.join(out_dir, prefix + '_umap.png'),
+
+rule all:
+    input:
+        config_file,
+        plink_output,
+        umap_output
+
+
+rule pca_and_umap:
+    input:
+        bcf=bcf_file,
+    output:
+        plink_output,
+        umap_output
     params:
         dirname=out_dir
     shell:
-        "python ../bcf_umap.py --bcf-file {input} --output-dir {params.dirname}"
+        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} "
 
+rule cp_config:
+    output:
+        config_file
+    shell:
+        "cp config.yaml {output}"
 
 rule bcf:
     input:
-        tree_files.output_list
+        tree_files
     output:
         bcf_file
     shell:
         "python ../ts_to_bcf.py --ts-file {input} --out-file {output} -v"
 
-
 rule ts_only:
     input:
-        tree_files.output_list
-
+        tree_files
 
 rule ts_ped:
     input:
-        pedigree=os.path.expanduser(config['pedigree'])
+        pedigree=os.path.expanduser(config['pedfile'])
     output:
-        out=tree_files.output_string
+        out=tree_files
+    threads: config['threads']
     shell:
-        "python ../pedigree_example.py --pedfile {input.pedigree} --outfile {output.out}"
-
+        "parallel -j {threads} :::" + parallel_simulation_commands()
