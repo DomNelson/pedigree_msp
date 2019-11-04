@@ -94,7 +94,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--ts-file', action='append', required=True)
+    parser.add_argument('-t', '--ts-file', nargs="*", required=True)
     parser.add_argument('-o', '--out-file', required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-T', '--test', action='store_true')
