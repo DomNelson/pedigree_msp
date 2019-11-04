@@ -1,3 +1,4 @@
 results/
 data/
 .snakemake/
+.ipynb_checkpoints/
