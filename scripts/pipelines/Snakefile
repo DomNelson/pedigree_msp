@@ -2,7 +2,8 @@ import os
 
 
 def get_ts_command(outfile):
-    simulate_args = ['pedfile', 'samples', 'popsize', 'mu', 'length', 'rho']
+    simulate_args = [
+            'pedarray', 'pedfile', 'samples', 'popsize', 'mu', 'length', 'rho']
     arg_dict = {k: v for k, v in config.items() if k in simulate_args}
     arg_dict['outfile'] = os.path.expanduser(outfile)
 
@@ -83,8 +84,6 @@ rule ts_only:
         tree_files
 
 rule ts_ped:
-    input:
-        pedigree=os.path.expanduser(config['pedfile'])
     output:
         out=tree_files
     threads: config['threads']
