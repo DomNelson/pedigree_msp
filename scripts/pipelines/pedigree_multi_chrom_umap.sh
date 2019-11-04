@@ -38,7 +38,7 @@ for C in "${CMDS[@]}"
 do
     echo Running $C
 done
-parallel -j $THREADS -- "${CMDS[@]}"
+parallel -j $THREADS ::: "${CMDS[@]}"
 
 ## Combine to single BCF
 CMD="python ts_to_bcf.py -o ${PREFIX}_combined.bcf"
