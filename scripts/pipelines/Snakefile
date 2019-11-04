@@ -1,0 +1,66 @@
+import os
+
+class WildcardList:
+    def __init__(self, string, wc, iterator):
+        self.output_string = string
+        self.output_list = [string.format(**{wc: x}) for x in iterator]
+
+def get_tree_files_str(outdir):
+    wc = 'chr_num'
+    fname = 'chr{chr_num}.h5'
+    out_str = os.path.join(os.path.expanduser(outdir), fname)
+
+    return wc, out_str
+
+
+out_dir = os.path.expanduser(config['outdir'])
+prefix = 'combined'
+
+tree_files_wc, tree_files_str = get_tree_files_str(out_dir)
+print(tree_files_str)
+tree_files_iter = range(config['n_chroms'])
+tree_files = WildcardList(tree_files_str, tree_files_wc, tree_files_iter)
+
+bcf_file = os.path.join(out_dir, prefix + '.bcf')
+
+rule pca_and_umap:
+    input:
+        bcf_file
+    output:
+        # Plink output
+        os.path.join(out_dir, prefix + '.eigenval'),
+        os.path.join(out_dir, prefix + '.eigenvec'),
+        os.path.join(out_dir, prefix + '.log'),
+        os.path.join(out_dir, prefix + '.nosex'),
+
+        # UMAP output
+        os.path.join(out_dir, prefix + '_umap.npy'),
+        os.path.join(out_dir, prefix + '_umap.png'),
+    params:
+        dirname=out_dir
+    shell:
+        "python ../bcf_umap.py --bcf-file {input} --output-dir {params.dirname}"
+
+
+rule bcf:
+    input:
+        tree_files.output_list
+    output:
+        bcf_file
+    shell:
+        "python ../ts_to_bcf.py --ts-file {input} --out-file {output} -v"
+
+
+rule ts_only:
+    input:
+        tree_files.output_list
+
+
+rule ts_ped:
+    input:
+        pedigree=os.path.expanduser(config['pedigree'])
+    output:
+        out=tree_files.output_string
+    shell:
+        "python ../pedigree_example.py --pedfile {input.pedigree} --outfile {output.out}"
+

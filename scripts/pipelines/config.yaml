@@ -1,0 +1,8 @@
+pedigree: "~/project/pedigree_msp/data/pedEx.txt"
+outdir: "~/temp/test_pipeline"
+
+n_chroms: 3
+n_samples: 100
+Ne: 100
+
+threads: 2
