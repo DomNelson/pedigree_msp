@@ -88,4 +88,4 @@ rule ts_ped:
         out=tree_files
     threads: config['threads']
     shell:
-        "parallel -j {threads} :::" + parallel_simulation_commands()
+        "parallel -j {threads} --halt 2 :::" + parallel_simulation_commands()
