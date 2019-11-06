@@ -1,16 +1,17 @@
 import os
 
 
-def get_ts_command(outfile):
+def get_ts_command(outfile=None):
     simulate_args = [
             'pedarray', 'pedfile', 'samples', 'popsize', 'mu', 'length', 'rho']
     arg_dict = {k: v for k, v in config.items() if k in simulate_args}
-    arg_dict['outfile'] = os.path.expanduser(outfile)
 
-    cmd = '"python ../pedigree_example.py'
+    if outfile:
+        arg_dict['outfile'] = os.path.expanduser(outfile)
+
+    cmd = "python ../pedigree_example.py"
     for k, v in arg_dict.items():
         cmd += ' --{} {}'.format(k, v)
-    cmd += '"'
 
     return cmd
 
@@ -85,7 +86,8 @@ rule ts_only:
 
 rule ts_ped:
     output:
-        out=tree_files
+        out=os.path.join(out_dir, 'chr{chrom_num}.h5')
     threads: config['threads']
     shell:
-        "parallel -j {threads} :::" + parallel_simulation_commands()
+        #"parallel -j {threads} :::" + parallel_simulation_commands()
+        get_ts_command() + " --outfile {output.out}"
