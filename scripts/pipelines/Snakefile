@@ -62,8 +62,9 @@ rule pca_and_umap:
         umap_output
     params:
         dirname=out_dir
+    threads: config['threads']
     shell:
-        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} "
+        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} --threads {threads}"
 
 rule cp_config:
     output:

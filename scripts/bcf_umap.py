@@ -42,6 +42,10 @@ def main(args):
         print("Running PCA")
         plink_pca_cmd = "plink --pca --bcf {} --memory 4000 --out {}".format(
                 bcf_file, prefix)
+
+        if args.threads:
+            plink_pca_cmd += " --threads {}".format(args.threads)
+
         subprocess.run(plink_pca_cmd, shell=True, check=True)
     else:
         print("Using existing PCA file:", evecs_file)
@@ -70,6 +74,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--bcf-file', required=True)
     parser.add_argument('-o', '--output-dir', required=True)
+    parser.add_argument('-t', '--threads', type=int)
     parser.add_argument('-d', '--ploidy', type=int, default=2)
     parser.add_argument('-I', '--ipython', action='store_true')
 
