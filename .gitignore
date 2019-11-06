@@ -1,4 +1,7 @@
 results/
 data/
 .snakemake/
+snakejob.*
+slurm*.out
+*.swp
 .ipynb_checkpoints/

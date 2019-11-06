@@ -63,8 +63,9 @@ rule pca_and_umap:
         umap_output
     params:
         dirname=out_dir
+    threads: config['threads']
     shell:
-        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} "
+        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} --threads {threads}"
 
 rule cp_config:
     output:
@@ -89,5 +90,5 @@ rule ts_ped:
         out=os.path.join(out_dir, 'chr{chrom_num}.h5')
     threads: config['threads']
     shell:
-        #"parallel -j {threads} :::" + parallel_simulation_commands()
+        #"parallel -j {threads} --halt 2 :::" + parallel_simulation_commands()
         get_ts_command() + " --outfile {output.out}"

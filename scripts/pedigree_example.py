@@ -1,5 +1,6 @@
 import sys, os
-sys.path.append(os.path.expanduser('~/project/msprime'))
+project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(project_dir, 'msprime'))
 import msprime
 import argparse
 from IPython import embed
@@ -25,10 +26,9 @@ def main(args):
         sample_col = 4
         samples = np.sum(pedigree[:, sample_col])
 
-
     ts = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
             model='dtwf', mutation_rate=args.mu, length=args.length,
-            recombination_rate=args.rho)
+            recombination_rate=args.rho, end_time=args.end_time)
 
     outfile = os.path.expanduser(args.outfile)
     ts.dump(outfile)
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--pedarray')
     parser.add_argument('-o', '--outfile', required=True)
     parser.add_argument('-n', '--samples', type=int)
+    parser.add_argument('-e', '--end_time', type=int)
     parser.add_argument('-N', '--popsize', type=int, default=100)
     parser.add_argument('-m', '--mu', type=float, default=1e-8)
     parser.add_argument('-l', '--length', type=float, default=1e6)
