@@ -1,5 +1,6 @@
 import sys, os
-sys.path.append(os.path.expanduser('../../msprime'))
+project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(project_dir, 'msprime'))
 import msprime
 import argparse
 from IPython import embed
