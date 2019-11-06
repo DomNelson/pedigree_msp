@@ -3,7 +3,7 @@ import os
 import argparse
 import subprocess
 
-sys.path.append(os.path.expanduser('~/project/msprime'))
+sys.path.append(os.path.expanduser('../../msprime'))
 import msprime
 
 
