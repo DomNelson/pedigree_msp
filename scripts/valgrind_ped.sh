@@ -5,5 +5,4 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null 2>&1 && pwd)"
 
 cd ~/project/msprime/lib/build
 
-ninja && valgrind ./dev-cli simulate <(cat $SCRIPTDIR/example_for_ped.cfg $SCRIPTDIR/ll_msp_sample_config.txt $SCRIPTDIR/ll_pedEx.txt) -o ~/temp/trees.h5
-
+ninja && valgrind ./dev-cli simulate <(cat $SCRIPTDIR/test/example_for_ped.cfg $SCRIPTDIR/test/ll_msp_sample_config.txt $SCRIPTDIR/test/ll_pedEx.txt) -o ~/temp/trees.h5
