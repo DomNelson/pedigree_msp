@@ -11,34 +11,33 @@ def main(args):
     if args.pedfile and args.pedarray:
         raise ValueError("Cannot specify both pedfile and pedarray")
 
-    if args.pedarray and args.samples:
-        raise ValueError("Cannot specify samples - already set in pedarray")
-
     samples = 10
     if args.samples:
         samples = args.samples
 
     pedigree = None
     if args.pedfile:
-        pedigree = os.path.expanduser(args.pedfile)
+        pedigree = msprime.Pedigree.read_txt(args.pedfile)
     elif args.pedarray:
-        pedigree = np.load(os.path.expanduser(args.pedarray))
-        sample_col = 4
-        samples = np.sum(pedigree[:, sample_col])
+        pedigree = msprime.Pedigree.read_npy(os.path.expanduser(args.pedarray))
+        pedigree.set_samples(args.samples)
 
     ts = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
             model='dtwf', mutation_rate=args.mu, length=args.length,
             recombination_rate=args.rho, end_time=args.end_time)
 
-    outfile = os.path.expanduser(args.outfile)
-    ts.dump(outfile)
+    if args.outfile:
+        outfile = os.path.expanduser(args.outfile)
+        ts.dump(outfile)
+    else:
+        embed()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--pedfile')
     parser.add_argument('-a', '--pedarray')
-    parser.add_argument('-o', '--outfile', required=True)
+    parser.add_argument('-o', '--outfile')
     parser.add_argument('-n', '--samples', type=int)
     parser.add_argument('-e', '--end_time', type=int)
     parser.add_argument('-N', '--popsize', type=int, default=100)
