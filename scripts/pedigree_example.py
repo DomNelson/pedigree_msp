@@ -23,8 +23,14 @@ def main(args):
         pedigree.set_samples(args.samples)
 
     ts = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
-            model='dtwf', mutation_rate=args.mu, length=args.length,
+            model='wf_ped', mutation_rate=args.mu, length=args.length,
             recombination_rate=args.rho, end_time=args.end_time)
+
+    ## Check that all IDs in the tree sequence are contained in the pedigree
+    ids = [int(ind.metadata) for ind in ts.individuals()]
+    id_diff = list(set(ids).difference(pedigree.inds))
+    if len(id_diff) > 0:
+        print("Invalid inds in tree sequence:", id_diff)
 
     if args.outfile:
         outfile = os.path.expanduser(args.outfile)
