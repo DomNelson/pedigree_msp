@@ -7,6 +7,13 @@ from IPython import embed
 import numpy as np
 
 
+def check_inds(ts):
+    ids = [int(ind.metadata) for ind in ts.individuals()]
+    id_diff = list(set(ids).difference(pedigree.inds))
+    if len(id_diff) > 0:
+        print("Invalid inds in tree sequence:", id_diff)
+
+
 def main(args):
     if args.pedfile and args.pedarray:
         raise ValueError("Cannot specify both pedfile and pedarray")
@@ -26,22 +33,25 @@ def main(args):
         pedigree_end_time = max(pedigree.times)
         des.append(msprime.SimulationModelChange(pedigree_end_time, args.model))
 
-    ts = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
+    replicates = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
             model='wf_ped', mutation_rate=args.mu, length=args.length,
             recombination_rate=args.rho, end_time=args.end_time,
-            demographic_events=des)
+            demographic_events=des, num_replicates=args.replicates)
 
     ## Check that all IDs in the tree sequence are contained in the pedigree
-    ids = [int(ind.metadata) for ind in ts.individuals()]
-    id_diff = list(set(ids).difference(pedigree.inds))
-    if len(id_diff) > 0:
-        print("Invalid inds in tree sequence:", id_diff)
-
-    if args.outfile:
+    if args.replicates is None and args.outfile is not None:
         outfile = os.path.expanduser(args.outfile)
+        ts = replicates
+        if args.check_inds:
+            check_inds(ts)
         ts.dump(outfile)
     else:
+        if args.check_inds:
+            for ts in replicates:
+                check_inds(ts)
+
         embed()
+
 
 
 if __name__ == "__main__":
@@ -56,6 +66,8 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--mu', type=float, default=1e-8)
     parser.add_argument('-l', '--length', type=float, default=1e6)
     parser.add_argument('-r', '--rho', type=float, default=1e-8)
+    parser.add_argument('-R', '--replicates', type=int)
+    parser.add_argument('-c', '--check_inds', action="store_true")
 
     args = parser.parse_args()
 
