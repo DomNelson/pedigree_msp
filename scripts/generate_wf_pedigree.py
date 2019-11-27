@@ -24,18 +24,18 @@ class PedWriter:
             parents = np.arange(1, self.ninds[i + 1] + 1) + self.gen_id_digit * (i + 1)
             
             if monogamous is True:
-                couples = np.random.choice(parents, size=(self.ninds[i] // 2, 2), replace=False)
+                couples = np.random.choice(parents, size=(self.ninds[i+1] // 2, 2), replace=False)
                 parent_choices_idx = np.random.choice(range(couples.shape[0]), size=self.ninds[i])
                 parent_choices = couples[parent_choices_idx]
             else:
                 parent_choices = np.random.choice(parents, size=(self.ninds[i], 2))
             
             for j in range(len(inds)):
-                self.ped_list.append([inds[j], parent_choices[j][0], parent_choices[j][1]])
+                self.ped_list.append([inds[j], parent_choices[j][0], parent_choices[j][1], i])
                 
         # Founders denoted by 0 for parents
         for p in set(parent_choices.ravel()):
-            self.ped_list.append([p, 0, 0])
+            self.ped_list.append([p, 0, 0, self.ngens - 1])
                 
     def write_ped(self, outfile):
         f = sys.stdout
