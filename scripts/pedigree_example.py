@@ -7,7 +7,7 @@ from IPython import embed
 import numpy as np
 
 
-def check_inds(ts):
+def check_inds(ts, pedigree):
     ids = [int(ind.metadata) for ind in ts.individuals()]
     id_diff = list(set(ids).difference(pedigree.inds))
     if len(id_diff) > 0:
@@ -22,7 +22,10 @@ def main(args):
 
     pedigree = None
     if args.pedfile:
-        pedigree = msprime.Pedigree.read_txt(args.pedfile)
+        time_col = None
+        if args.load_time:
+            time_col = 3
+        pedigree = msprime.Pedigree.read_txt(args.pedfile, time_col=time_col)
     elif args.pedarray:
         pedigree = msprime.Pedigree.read_npy(os.path.expanduser(args.pedarray))
         pedigree.set_samples(args.samples)
@@ -43,12 +46,12 @@ def main(args):
         outfile = os.path.expanduser(args.outfile)
         ts = replicates
         if args.check_inds:
-            check_inds(ts)
+            check_inds(ts, pedigree)
         ts.dump(outfile)
     else:
         if args.check_inds:
             for ts in replicates:
-                check_inds(ts)
+                check_inds(ts, pedigree)
 
         embed()
 
@@ -68,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--rho', type=float, default=1e-8)
     parser.add_argument('-R', '--replicates', type=int)
     parser.add_argument('-c', '--check_inds', action="store_true")
+    parser.add_argument('-t', '--load_time', action="store_true")
 
     args = parser.parse_args()
 
