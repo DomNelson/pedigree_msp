@@ -29,12 +29,14 @@ class PedWriter:
             
             if monogamous is True:
                 np.random.shuffle(parents)
-                parents = parents[(parents.shape // 2) * 2] # Get even length
-                parent_choices = parents.reshape(-1, 2)
+                parents = parents[:(parents.shape[0] // 2) * 2] # Get even length
+                couples = parents.reshape(-1, 2)
+                parent_choices = couples[np.random.choice(range(len(couples)),
+                    size=len(inds))]
             else:
                 parent_choices = np.vstack(
                         [np.random.choice(parents, size=2, replace=False)
-                            for i in range(self.ninds[i])])
+                            for i in range(len(inds))])
             
             chosen_parents = set()
             for j in range(len(inds)):
