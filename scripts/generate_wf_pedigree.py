@@ -20,8 +20,11 @@ class PedWriter:
         self.ped_list = []
         
     def build_ped_list(self, monogamous=False):
-        for i in tqdm(range(self.ngens - 1)):
-            inds = np.arange(1, self.ninds[i] + 1) + self.gen_id_digit * i
+        inds = np.arange(1, self.ninds[0] + 1)
+        gen_iter = range(self.ngens - 1)
+        if np.sum(self.ninds) > 200000:
+            gen_iter = tqdm(gen_iter)
+        for i in gen_iter:
             parents = np.arange(1, self.ninds[i + 1] + 1) + self.gen_id_digit * (i + 1)
             
             if monogamous is True:
@@ -33,18 +36,24 @@ class PedWriter:
                         [np.random.choice(parents, size=2, replace=False)
                             for i in range(self.ninds[i])])
             
+            chosen_parents = set()
             for j in range(len(inds)):
+                chosen_parents.update(parent_choices[j])
                 self.ped_list.append([inds[j], parent_choices[j][0],
                     parent_choices[j][1], i])
+
+            inds = np.array(list(chosen_parents))
                 
         # Founders denoted by 0 for parents
-        for p in set(parent_choices.ravel()):
+        for p in chosen_parents:
             self.ped_list.append([p, 0, 0, self.ngens - 1])
                 
     def write_ped(self, outfile):
         f = sys.stdout
         if outfile:
             f = open(outfile, 'w')
+
+        f.write("ind\tfather\tmother\ttime\n")
 
         for row in self.ped_list:
             line = '\t'.join([str(int(x)) for x in row])
