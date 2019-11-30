@@ -8,10 +8,15 @@ import numpy as np
 
 
 def check_inds(ts, pedigree):
-    ids = [int(ind.metadata) for ind in ts.individuals()]
-    id_diff = list(set(ids).difference(pedigree.inds))
-    if len(id_diff) > 0:
-        print("Invalid inds in tree sequence:", id_diff)
+    try:
+        ids = [int(ind.metadata) for ind in ts.individuals()]
+        id_diff = list(set(ids).difference(pedigree.inds))
+        if len(id_diff) > 0:
+            print("Invalid inds in tree sequence:", id_diff)
+    except:
+        print("Unexpected error!")
+        embed()
+        raise
 
 
 def main(args):
@@ -36,9 +41,17 @@ def main(args):
         pedigree_end_time = max(pedigree.times)
         des.append(msprime.SimulationModelChange(pedigree_end_time, args.model))
 
+    ## For testing, sometimes need to specify num_loci directly
+    rm = msprime.RecombinationMap(
+            [0, int(args.length)],
+            [args.rho, 0],
+            int(args.length))
+
     replicates = msprime.simulate(samples, Ne=args.popsize, pedigree=pedigree,
-            model='wf_ped', mutation_rate=args.mu, length=args.length,
-            recombination_rate=args.rho, end_time=args.end_time,
+            model='wf_ped', mutation_rate=args.mu,
+            # length=args.length, recombination_rate=args.rho,
+            recombination_map=rm,
+            end_time=args.end_time,
             demographic_events=des, num_replicates=args.replicates)
 
     ## Check that all IDs in the tree sequence are contained in the pedigree
