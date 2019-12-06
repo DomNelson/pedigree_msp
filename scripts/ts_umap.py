@@ -5,7 +5,7 @@ import subprocess
 import argparse
 
 import sys
-sys.path.append('msprime')
+sys.path.insert(0, 'msprime')
 import msprime
 
 import matplotlib

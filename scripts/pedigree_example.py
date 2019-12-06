@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append("msprime")
+sys.path.insert(0, "msprime")
 import msprime
 import argparse
 from IPython import embed

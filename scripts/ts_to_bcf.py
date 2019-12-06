@@ -3,7 +3,7 @@ import os
 import argparse
 import subprocess
 
-sys.path.append('msprime')
+sys.path.insert(0, 'msprime')
 import msprime
 
 
