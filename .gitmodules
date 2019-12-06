@@ -1,0 +1,3 @@
+[submodule "scripts/msprime"]
+	path = scripts/msprime
+	url = git@github.com:DomNelson/msprime.git
