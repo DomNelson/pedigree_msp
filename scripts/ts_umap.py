@@ -5,7 +5,7 @@ import subprocess
 import argparse
 
 import sys
-sys.path.append(os.path.expanduser('../../msprime'))
+sys.path.append('msprime')
 import msprime
 
 import matplotlib

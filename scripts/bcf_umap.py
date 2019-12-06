@@ -5,8 +5,7 @@ import umap
 import subprocess
 import argparse
 
-project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.join(project_dir, 'msprime'))
+sys.path.append('msprime')
 import msprime
 
 import matplotlib

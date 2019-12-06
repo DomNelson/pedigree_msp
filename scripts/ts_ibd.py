@@ -1,4 +1,5 @@
 import sys, os
+sys.path.append("msprime")
 import msprime
 import numpy as np
 import scipy.sparse

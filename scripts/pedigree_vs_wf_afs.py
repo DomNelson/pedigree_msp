@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append(os.path.expanduser('../../msprime'))
+sys.path.append('msprime')
 import msprime
 
 growth_rate = 0.3
