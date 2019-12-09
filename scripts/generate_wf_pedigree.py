@@ -14,11 +14,11 @@ class PedWriter:
             assert ngens is not None
             self.ngens = ngens
             self.ninds = [ninds] * ngens
-            
+
         max_inds_per_gen = max([n + 1 for n in self.ninds])
         self.gen_id_digit = 10 ** (np.floor(np.log10(max_inds_per_gen)) + 1)
         self.ped_list = []
-        
+
     def build_ped_list(self, monogamous=False):
         inds = np.arange(1, self.ninds[0] + 1)
         gen_iter = range(self.ngens - 1)
@@ -26,7 +26,7 @@ class PedWriter:
             gen_iter = tqdm(gen_iter)
         for i in gen_iter:
             parents = np.arange(1, self.ninds[i + 1] + 1) + self.gen_id_digit * (i + 1)
-            
+
             if monogamous is True:
                 np.random.shuffle(parents)
                 parents = parents[:(parents.shape[0] // 2) * 2] # Get even length
@@ -37,7 +37,7 @@ class PedWriter:
                 parent_choices = np.vstack(
                         [np.random.choice(parents, size=2, replace=False)
                             for i in range(len(inds))])
-            
+
             chosen_parents = set()
             for j in range(len(inds)):
                 chosen_parents.update(parent_choices[j])
@@ -45,11 +45,11 @@ class PedWriter:
                     parent_choices[j][1], i])
 
             inds = np.array(list(chosen_parents))
-                
+
         # Founders denoted by 0 for parents
         for p in chosen_parents:
             self.ped_list.append([p, 0, 0, self.ngens - 1])
-                
+
     def write_ped(self, outfile):
         f = sys.stdout
         if outfile:
