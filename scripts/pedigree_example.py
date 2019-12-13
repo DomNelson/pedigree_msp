@@ -12,7 +12,7 @@ def check_inds(ts, pedigree):
         id_diff = list(set(ids).difference(pedigree.inds))
         if len(id_diff) > 0:
             print("Invalid inds in tree sequence:", id_diff)
-    except:
+    except:  #NOQA
         print("Unexpected error!")
         embed()
         raise
