@@ -3,6 +3,7 @@ import numpy as np
 import umap
 import subprocess
 import argparse
+import tempfile
 
 import sys
 sys.path.insert(0, 'msprime')
@@ -47,9 +48,24 @@ def main(args):
     if (not os.path.exists(bcf_file) or
             os.path.getmtime(bcf_file) < ts_time):
         print("Writing BCF from tree sequence file...")
+
+        # Need to remove individuals from ts or else tskit gets confused...
+        # TODO: Should strip all except samples so ploidy is read automatically
+        ts = msprime.load(ts_file)
+        if ts.num_individuals > 0:
+            ts_noinds_file = tempfile.NamedTemporaryFile()
+            ll_tables = ts.dump_tables().asdict()
+            ll_tables['individuals'] = msprime.tskit.IndividualTable().asdict()
+            ll_tables['nodes']['individual'].fill(-1)
+            ts_noinds = msprime.tskit.tables.TableCollection.fromdict(
+                    ll_tables).tree_sequence()
+            ts_noinds.dump(ts_noinds_file.name)
+            ts_file = ts_noinds_file.name
+
         make_bcf_cmd = "tskit vcf --ploidy {} {} | bcftools view -O b > {}".format(
                 args.ploidy, ts_file, bcf_file)
         subprocess.run(make_bcf_cmd, shell=True, check=True)
+        ts_noinds_file.close()
 
         ts = msprime.load(ts_file)
         assert (ts.num_samples % args.ploidy == 0)

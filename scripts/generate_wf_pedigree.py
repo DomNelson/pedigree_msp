@@ -99,7 +99,7 @@ def main(args):
         sys.exit()
 
     PW.build_ped_list(args.monogamous)
-    PW.write_ped(args.outfile)
+    PW.write_ped(outfile)
 
 
 if __name__ == '__main__':
