@@ -4,15 +4,14 @@ import numpy as np
 import umap
 import subprocess
 import argparse
+import matplotlib
+from IPython import embed
 
 sys.path.insert(0, 'msprime')
-import msprime
+import msprime  # NOQA
 
-import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-from IPython import embed
+import matplotlib.pyplot as plt  # NOQA
 
 
 def get_prefix(args):
@@ -30,7 +29,7 @@ def get_prefix(args):
 
 
 def main(args):
-    out_dir = os.path.expanduser(args.output_dir)
+    # out_dir = os.path.expanduser(args.output_dir)
     bcf_file = os.path.expanduser(args.bcf_file)
     bcf_time = os.path.getmtime(bcf_file)
     prefix = get_prefix(args)
@@ -49,12 +48,12 @@ def main(args):
         subprocess.run(plink_pca_cmd, shell=True, check=True)
     else:
         print("Using existing PCA file:", evecs_file)
-    pca_time = os.path.getmtime(bcf_file)
+    # pca_time = os.path.getmtime(bcf_file)
 
     print("Running UMAP")
     umap_file = prefix + '_umap.npy'
     data = np.genfromtxt(evecs_file)
-    IDs, evecs = data[:, :2], data[:, 2:]
+    IDs, evecs = data[:, :2], data[:, 2:]  # NOQA
 
     embedding = umap.UMAP(n_neighbors=5,
                           min_dist=0.1).fit_transform(evecs)
