@@ -19,6 +19,11 @@ def check_inds(ts, pedigree):
 
 
 def main(args):
+    if args.pedarray is not None and args.time_col:
+        raise ValueError(
+                "Times are always loaded from pedigrees specified in " +\
+                "numpy .npy format - cannot also specify `time_col`")
+
     if args.num_samples and args.samples_file:
         raise ValueError("Cannot specify both num_samples and samples_file")
 
@@ -40,7 +45,7 @@ def main(args):
     pedigree = None
     if args.pedfile:
         time_col = None
-        if args.load_time:
+        if args.load_times:
             time_col = 3
         pedigree = msprime.Pedigree.read_txt(args.pedfile, time_col=time_col)
     elif args.pedarray:
@@ -151,10 +156,11 @@ Text-to-numpy conversion example:
     parser.add_argument('-c', '--check_inds', action="store_true",
             help="""Debug option - verify all individuals IDs in the simulated
             tree sequence are contained within the pedigree""")
-    parser.add_argument('-t', '--load_time', action="store_true",
-            help="""Flag to load times as 4th column of the pedigree. By
-            default, times are (roughly) inferred as a partial ordering of
-            ancestors.""")
+    parser.add_argument('-t', '--load_times', action="store_true",
+            help="""Flag to load times as 4th column of the pedigree. Without
+            this flag, times are (roughly) inferred as a partial ordering of
+            ancestors. Note that pedigrees in numpy .npy format always have
+            times baked in.""")
 
     args = parser.parse_args()
 
