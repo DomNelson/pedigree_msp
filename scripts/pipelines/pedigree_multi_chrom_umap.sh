@@ -27,7 +27,7 @@ for I in $CHROM_NUMS
 do
     F=${TS_FILES[$I]};
     echo Simulating $F
-    CMDS[$I]="python pedigree_example.py "
+    CMDS[$I]="python pedigree_simulate.py "
     CMDS[$I]+="-p $PEDFILE -o $F -n $N_SAMPLES -N $POPSIZE -m $MU -l $LEN;"
     # CMDS[$I]="echo testing $I;"
     # CMDS[$I]+=" sleep 1"

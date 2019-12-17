@@ -7,7 +7,7 @@ def get_ts_command(outfile):
     arg_dict = {k: v for k, v in config.items() if k in simulate_args}
     arg_dict['outfile'] = os.path.expanduser(outfile)
 
-    cmd = '"python ../pedigree_example.py'
+    cmd = '"python ../pedigree_simulate.py'
     for k, v in arg_dict.items():
         cmd += ' --{} {}'.format(k, v)
     cmd += '"'
