@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "msprime")
+sys.path.insert(0, "../msprime")
 import os
 import msprime
 import numpy as np
