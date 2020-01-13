@@ -1,9 +1,9 @@
-import sys, os
+import sys
+import os
 sys.path.insert(0, "msprime")  # NOQA
 import msprime
 import argparse
 from IPython import embed
-import numpy as np
 
 
 def check_inds(ts, pedigree):

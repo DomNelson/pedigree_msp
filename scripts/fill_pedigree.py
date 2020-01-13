@@ -6,6 +6,17 @@ from collections import defaultdict
 import argparse
 
 
+class PedigreeRow:
+    def __init__(self, row):
+        self.row = row
+
+    def __eq__(self, other):
+        return self.row[0] == other.row[0]
+    
+    def __hash__(self):
+        return hash(self.row[0])
+
+
 class PedFiller:
     def __init__(self, ped_df):
         self.ped_df = ped_df
@@ -42,6 +53,9 @@ class PedFiller:
         times = np.zeros(len(self.ped_df['ind']))
         t = 0
         while len(climbers) > 0:
+            if t > 18:
+                print(climbers)
+                sys.exit()
             next_climbers = set()
             for c in tqdm(climbers,
                           leave=False,
@@ -112,14 +126,12 @@ class PedFiller:
 
         max_time = int(np.max(self.ped_df['time']))
         max_ID = np.max(self.ped_df['ind'])
+        print(max_ID)
+        printed_gen1 = False
 
         self.new_ped_rows = []
         for time in tqdm(range(max_time), desc='Drawing new connections'):
             founders = self.founder_cohorts[time]
-            if len(set(founders)) != len(founders):
-                print("Error at time", time)
-                print(founders)
-                break
             if len(founders) == 0:
                 continue
 
@@ -138,7 +150,7 @@ class PedFiller:
             max_ID = np.max(new_parents)
             for founder, parents in zip(not_reconnected, new_parents):
                 mother, father = parents
-                row = [founder, mother, father, time]
+                row = [founder, father, mother, time]
                 self.new_ped_rows.append(row)
 
             # Add new parents to next founder generation
@@ -148,8 +160,13 @@ class PedFiller:
 
             for founder in to_reconnect:
                 mother, father = np.random.choice(possible_parents, size=2)
-                row = [founder, mother, father, time]
+                row = [founder, father, mother, time]
                 self.new_ped_rows.append(row)
+
+        # Add back original and new founders at max_time
+        for founder in self.founder_cohorts[max_time]:
+            row = [founder, 0, 0, max_time]
+            self.new_ped_rows.append(row)
 
     def collect_rows(self):
         """
@@ -161,45 +178,22 @@ class PedFiller:
                               ).set_index('ind').sort_index()
         original_df = self.ped_df.set_index('ind').sort_index()
 
-        self.merged_rows = []
-        self.unchanged_rows = []
-        self.new_rows = []
-        new_iter = new_df.iterrows()
-        new_founder, new_row = next(new_iter)
+        new_ped_set = set([PedigreeRow(row) for row in self.new_ped_rows])
+        original_ped_set = set([PedigreeRow(list(row))
+            for _, row in self.ped_df.iterrows()])
 
-        # Replace reconnected founder rows
-        for ind, row in tqdm(original_df.iterrows(),
-                             total=original_df.shape[0],
-                             desc="Merging new connections"):
-            if new_founder == ind:
-                self.merged_rows.append(
-                    [new_founder,
-                     int(new_row.father),
-                     int(new_row.mother),
-                     new_row.time]
-                )
-                new_founder, new_row = next(new_iter)
-            else:
-                self.unchanged_rows.append(
-                    [ind,
-                     int(row.father),
-                     int(row.mother),
-                     row.time]
-                )
+        unchanged_rows = list(original_ped_set.difference(new_ped_set))
+        updated_rows = list(original_ped_set.intersection(new_ped_set))
+        new_rows = list(new_ped_set.difference(original_ped_set))
+        all_ped_rows = unchanged_rows + updated_rows + new_rows
+        self.new_ped = [r.row for row in all_ped_rows]
 
-        # Add new individuals
-        for founder, row in new_iter:
-            self.new_rows.append(
-                [founder,
-                 int(row.father),
-                 int(row.mother),
-                 row.time]
-            )
-
-        assert(len(self.unchanged_rows) + len(self.merged_rows) ==
-               self.ped_df.shape[0])
-
-        self.new_ped = self.unchanged_rows + self.merged_rows + self.new_rows
+        # Make sure all parents are themselves in the pedigree
+        inds, fathers, mothers, _ = zip(*self.new_ped)
+        all_parents = set(list(fathers) + list(mothers))
+        all_parents.remove(0)
+        all_inds = list(inds) + list(self.ped_df.ind)
+        assert len(all_parents.difference(all_inds)) == 0
 
     def write_filled_ped(self, path):
         with open(os.path.expanduser(path), 'w') as f:
