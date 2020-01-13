@@ -1,9 +1,9 @@
-import sys
-import os
+import sys, os
 sys.path.insert(0, "msprime")  # NOQA
 import msprime
 import argparse
 from IPython import embed
+import numpy as np
 
 
 def check_inds(ts, pedigree):
@@ -19,13 +19,16 @@ def check_inds(ts, pedigree):
 
 
 def main(args):
-    if args.pedarray is not None and args.time_col:
+    if args.pedarray is not None and args.load_times:
         raise ValueError(
                 "Times are always loaded from pedigrees specified in " +\
-                "numpy .npy format - cannot also specify `time_col`")
+                "numpy .npy format - cannot also specify `load_times`")
 
-    if args.num_samples and args.samples_file:
+    if args.num_samples is not None and args.samples_file is not None:
         raise ValueError("Cannot specify both num_samples and samples_file")
+
+    if args.num_samples is None and args.samples_file is None:
+        raise ValueError("Must specify one of num_samples or samples_file")
 
     if args.convert:
         if args.outfile is None:
@@ -34,13 +37,6 @@ def main(args):
         if args.pedarray is not None:
             raise ValueError(
                     "Can only specify pedigree in text format for conversion.")
-
-    num_samples = args.num_samples
-    sample_IDs = None
-    if args.samples_file:
-        with open(os.path.expanduser(args.samples_file), 'r') as f:
-            sample_IDs = [int(ID) for ID in f]
-        num_samples = len(sample_IDs)
 
     pedigree = None
     if args.pedfile:
@@ -57,12 +53,19 @@ def main(args):
         pedigree.save_npy(pedigree_outfile)
         sys.exit()
 
-    pedigree.set_samples(num_samples, sample_IDs)
+    if args.samples_file:
+        with open(os.path.expanduser(args.samples_file), 'r') as f:
+            sample_IDs = [int(ID) for ID in f]
+        pedigree.set_samples(sample_IDs=sample_IDs, probands_only=False)
+        num_samples = len(sample_IDs)
+    elif args.num_samples is not None:
+        num_samples = args.num_samples
+        pedigree.set_samples(num_samples=num_samples)
 
     ## Build demographic events for model changes after pedigree sims
     des = []
     if args.model is not None:
-        pedigree_end_time = max(pedigree.times)
+        pedigree_end_time = max(pedigree.time)
         des.append(msprime.SimulationModelChange(pedigree_end_time, args.model))
 
     ## For testing, sometimes need to specify num_loci directly
@@ -91,6 +94,11 @@ def main(args):
         if args.check_inds:
             for ts in replicates:
                 check_inds(ts, pedigree)
+        if args.outfile:
+            for i, ts in enumerate(replicates):
+                path, ext = os.path.splitext(args.outfile)
+                outfile = path + '_' + str(i + 1) + ext
+                ts.dump(outfile)
 
     if args.outfile is None:
         embed()
@@ -132,11 +140,10 @@ Text-to-numpy conversion example:
             format. If not given, drops into IPython interpreter where the
             output tree sequence `ts` can be examined, and saved using
             `ts.dump("path/to/output/file")`""")
-    add_argument_no_metavar('-n', '--num_samples', type=int, default=10,
-            help="""default: %(default)d""")
+    add_argument_no_metavar('-n', '--num_samples', type=int)
     add_argument_no_metavar('-s', '--samples_file',
             help="""Path to file containing pedigree IDs of individuals to
-            simulate, one ID per line. Overrides `num_samples`.""")
+            simulate, one ID per line.""")
     add_argument_no_metavar('-e', '--end_time', type=int)
     add_argument_no_metavar('-d', '--model', choices=['dtwf', 'hudson'],
             help="""Simulation model to switch to after reaching the top of the
