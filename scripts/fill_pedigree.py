@@ -186,7 +186,7 @@ class PedFiller:
         updated_rows = list(original_ped_set.intersection(new_ped_set))
         new_rows = list(new_ped_set.difference(original_ped_set))
         all_ped_rows = unchanged_rows + updated_rows + new_rows
-        self.new_ped = [r.row for row in all_ped_rows]
+        self.new_ped = [r.row for r in all_ped_rows]
 
         # Make sure all parents are themselves in the pedigree
         inds, fathers, mothers, _ = zip(*self.new_ped)
