@@ -230,11 +230,11 @@ if __name__ == "__main__":
                         'space'. Default: <tab>""")
     parser.add_argument('-r', '--reconnection-rate', metavar='', default=0.05,
                         help="""Rate at which recent founders will reconnect to
-                        the pedigree. Default: %(default).3f""")
+                        the pedigree. Default: %(default).3f""", type=float)
     parser.add_argument('-N', '--population-size', metavar='', default=100,
                         help="""Size of randomly-mating population containing
                         founder lineages which have not reconnected. Default:
-                        %(default)d""")
+                        %(default)d""", type=int)
 
     args = parser.parse_args()
     main(args)
