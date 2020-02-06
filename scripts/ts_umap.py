@@ -51,6 +51,7 @@ def main(args):
 
         # Need to remove individuals from ts or else tskit gets confused...
         # TODO: Should strip all except samples so ploidy is read automatically
+        ts_noinds_file = None
         ts = msprime.load(ts_file)
         if ts.num_individuals > 0:
             ts_noinds_file = tempfile.NamedTemporaryFile()
@@ -61,13 +62,14 @@ def main(args):
                     ll_tables).tree_sequence()
             ts_noinds.dump(ts_noinds_file.name)
             ts_file = ts_noinds_file.name
+            ts = msprime.load(ts_noinds_file.name)
 
         make_bcf_cmd = "tskit vcf --ploidy {} {} | bcftools view -O b > {}".format(
                 args.ploidy, ts_file, bcf_file)
         subprocess.run(make_bcf_cmd, shell=True, check=True)
-        ts_noinds_file.close()
+        if ts_noinds_file is not None:
+            ts_noinds_file.close()
 
-        ts = msprime.load(ts_file)
         assert (ts.num_samples % args.ploidy == 0)
         num_samples = int(ts.num_samples / args.ploidy)
         new_sample_ids_file = "tempfile"
