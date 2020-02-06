@@ -2,6 +2,7 @@ import sys
 import os
 import argparse
 import subprocess
+import tempfile
 
 sys.path.insert(0, 'msprime')
 import msprime
@@ -25,11 +26,27 @@ class Runner:
 
 
 def ts_to_bcf_single(ts_file, out_file, runner):
+    # Need to remove individuals from ts or else tskit gets confused...
+    # TODO: Should strip all except samples so ploidy is read automatically
+    ts_noinds_file = None
+    ts = msprime.load(ts_file)
+    if ts.num_individuals > 0:
+        ts_noinds_file = tempfile.NamedTemporaryFile()
+        ll_tables = ts.dump_tables().asdict()
+        ll_tables['individuals'] = msprime.tskit.IndividualTable().asdict()
+        ll_tables['nodes']['individual'].fill(-1)
+        ts_noinds = msprime.tskit.tables.TableCollection.fromdict(
+                ll_tables).tree_sequence()
+        ts_noinds.dump(ts_noinds_file.name)
+        ts_file = ts_noinds_file.name
+        ts = msprime.load(ts_noinds_file.name)
+
     make_bcf_cmd = "tskit vcf --ploidy 2 {} | bcftools view -O b > {}".format(
             ts_file, out_file)
     runner.run(make_bcf_cmd)
+    if ts_noinds_file is not None:
+        ts_noinds_file.close()
 
-    ts = msprime.load(ts_file)
     assert (ts.num_samples % 2 == 0)
     num_samples = int(ts.num_samples / 2)
     new_sample_ids_file = ".tmp_sample_ids.txt"
