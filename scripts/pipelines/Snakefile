@@ -1,15 +1,16 @@
 import os
+import yaml
 
 
 def get_ts_command(outfile=None):
     simulate_args = [
-            'pedarray', 'pedfile', 'samples', 'popsize', 'mu', 'length', 'rho']
+            'pedarray', 'pedfile', 'num_samples', 'popsize', 'mu', 'length', 'rho']
     arg_dict = {k: v for k, v in config.items() if k in simulate_args}
 
     if outfile:
         arg_dict['outfile'] = os.path.expanduser(outfile)
 
-    cmd = "python ../pedigree_simulate.py"
+    cmd = "python pedigree_simulate.py"
     for k, v in arg_dict.items():
         cmd += ' --{} {}'.format(k, v)
 
@@ -65,13 +66,16 @@ rule pca_and_umap:
         dirname=out_dir
     threads: config['threads']
     shell:
-        "python ../bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} --threads {threads}"
+        "python /bcf_umap.py --bcf-file {input.bcf} --output-dir {params.dirname} --threads {threads}"
 
 rule cp_config:
     output:
         config_file
-    shell:
-        "cp config.yaml {output}"
+    run:
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f, default_flow_style = False)
+    #shell:
+    #    "cp config.yaml {output}"
 
 rule bcf:
     input:
@@ -79,7 +83,7 @@ rule bcf:
     output:
         bcf_file
     shell:
-        "python ../ts_to_bcf.py --ts-file {input} --out-file {output} -v"
+        "python ts_to_bcf.py --ts-file {input} --out-file {output} -v"
 
 rule ts_only:
     input:
