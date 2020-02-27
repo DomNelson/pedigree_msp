@@ -2,10 +2,11 @@ import sys
 import os
 import argparse
 import subprocess
+import numpy as np
 import tempfile
 
 sys.path.insert(0, 'msprime')
-import msprime
+import msprime # NOQA
 
 
 class Runner:
@@ -25,38 +26,93 @@ class Runner:
             subprocess.run(cmd, shell=True, check=True)
 
 
+def ts_clean_inds(ts):
+    ll_tables = ts.dump_tables().asdict()
+    sample_nodes = set(ts.samples())
+
+    # Collect sampled individuals, checking they have two sample nodes
+    sample_individuals = []
+    for ind in ts.individuals():
+        if len(ind.nodes) == 0:
+            continue
+
+        if ind.nodes[0] in sample_nodes:
+            assert len(ind.nodes) == 2
+            assert ind.nodes[1] in sample_nodes
+            sample_individuals.append(ind)
+
+    # Since we depend on the sampled individuals being the first $n$
+    # individuals, check that this is in fact the case, and pull out the
+    # last individual
+    sample_individual_ids = [ind.id for ind in sample_individuals]
+    assert np.min(sample_individual_ids) == 0
+    assert np.max(np.diff(sorted(sample_individual_ids))) == 1
+    last_sample_idx = np.max(sample_individual_ids)
+
+    # Trim non-sample individuals from the tables
+    ind_tables = ll_tables['individuals']
+    ind_tables['flags'] = ind_tables['flags'][:last_sample_idx + 1]
+
+    # We add one to offset indices. Since their first value is always 0,
+    # our data is shifted right by 1
+    ind_tables['location_offset'] = \
+        ind_tables['location_offset'][:last_sample_idx + 2]
+    idx = ind_tables['location_offset'][-1]
+    ind_tables['location'] = ind_tables['location'][:idx]
+
+    ind_tables['metadata_offset'] = \
+        ind_tables['metadata_offset'][:last_sample_idx + 2]
+    idx = ind_tables['metadata_offset'][-1]
+    ind_tables['metadata'] = ind_tables['metadata'][:idx]
+
+    # This is redundant (assigned them equal above) but is more explicit if
+    # if wasn't clear that we in fact updated the original dict in-place
+    ll_tables['individuals'] = ind_tables
+
+    # Clear out references to individuals which we've removed
+    for i in range(ll_tables['nodes']['individual'].shape[0]):
+        ind_idx = ll_tables['nodes']['individual'][i]
+        if ind_idx not in set(sample_individual_ids):
+            ll_tables['nodes']['individual'][i] = -1
+
+    # Create new tree sequence with only sample individuals and save to
+    # tempfile to be converted to VCF
+    ts_only_sample_inds = msprime.tskit.tables.TableCollection.fromdict(
+                                ll_tables
+                            ).tree_sequence()
+
+    return ts_only_sample_inds
+
+
 def ts_to_bcf_single(ts_file, out_file, runner):
-    # Need to remove individuals from ts or else tskit gets confused...
-    # TODO: Should strip all except samples so ploidy is read automatically
-    ts_noinds_file = None
+    # Need to remove non-sample individuals from ts or else tskit gets confused
     ts = msprime.load(ts_file)
-    if ts.num_individuals > 0:
-        ts_noinds_file = tempfile.NamedTemporaryFile()
-        ll_tables = ts.dump_tables().asdict()
-        ll_tables['individuals'] = msprime.tskit.IndividualTable().asdict()
-        ll_tables['nodes']['individual'].fill(-1)
-        ts_noinds = msprime.tskit.tables.TableCollection.fromdict(
-                ll_tables).tree_sequence()
-        ts_noinds.dump(ts_noinds_file.name)
-        ts_file = ts_noinds_file.name
-        ts = msprime.load(ts_noinds_file.name)
+    if ts.num_individuals == 0:
+        bcf_cmd = "tskit vcf --ploidy 2 {} | bcftools view -O b > {}".format(
+                           ts_file, out_file)
+        runner.run(bcf_cmd)
+    else:
+        ts_only_sample_inds = ts_clean_inds(ts)
+        # TODO: This will probably fail if metadata isn't present
+        ids = [ind.metadata.decode('utf8')
+               for ind in ts_only_sample_inds.individuals()]
 
-    make_bcf_cmd = "tskit vcf --ploidy 2 {} | bcftools view -O b > {}".format(
-            ts_file, out_file)
-    runner.run(make_bcf_cmd)
-    if ts_noinds_file is not None:
-        ts_noinds_file.close()
-
-    assert (ts.num_samples % 2 == 0)
-    num_samples = int(ts.num_samples / 2)
-    new_sample_ids_file = ".tmp_sample_ids.txt"
-    with open(new_sample_ids_file, 'w') as f:
-        for i in range(1, num_samples+1):
-            f.write('tsk_' + str(i) + '\n')
-    reheader_cmd = ("bcftools reheader --samples {} {} > tmp && "
-            "mv tmp {} && rm {}").format(
-            new_sample_ids_file, out_file, out_file, new_sample_ids_file)
-    runner.run(reheader_cmd)
+        read_fd, write_fd = os.pipe()
+        write_pipe = os.fdopen(write_fd, "w")
+        with open(out_file, "w") as f:
+            proc = subprocess.Popen(
+                ["bcftools", "view", "-O", "b"], stdin=read_fd, stdout=f
+            )
+            ts_only_sample_inds.write_vcf(
+                write_pipe, individual_names=ids
+            )
+            write_pipe.close()
+            os.close(read_fd)
+            proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    "bcftools failed with status:", proc.returncode
+                )
 
 
 def bcf_convert_chrom(bcf_file, chrom_num, runner):
