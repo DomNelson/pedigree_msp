@@ -6,6 +6,29 @@ from IPython import embed
 import numpy as np
 
 
+def ts_private_mutations_only(ts):
+    """
+    Returns a new tree sequence which is a single tree and contains at least
+    one singleton for each sample.
+    """
+    ll_tables = ts.dump_tables().asdict()
+
+    mt = msprime.MutationTable()
+    st = msprime.SiteTable()
+    positions = sorted([np.random.random() for _ in range(ts.num_samples)])
+    for i, n in enumerate(ts.samples()):
+        st.add_row(positions[i], '0')
+        mt.add_row(i, n, '1')
+
+    ll_tables['sites'] = st.asdict()
+    ll_tables['mutations'] = mt.asdict()
+
+    ts_singletons = msprime.tskit.tables.TableCollection.fromdict(
+            ll_tables).tree_sequence()
+
+    return ts_singletons
+
+
 def check_inds(ts, pedigree):
     try:
         ids = [int(ind.metadata) for ind in ts.individuals()]
@@ -16,6 +39,10 @@ def check_inds(ts, pedigree):
         print("Unexpected error!")
         embed()
         raise
+
+    ts = ts_private_mutations_only(ts)
+
+    return ts
 
 
 def main(args):
@@ -53,10 +80,11 @@ def main(args):
         pedigree.save_npy(pedigree_outfile)
         sys.exit()
 
+    sample_IDs = None
     if args.samples_file:
         with open(os.path.expanduser(args.samples_file), 'r') as f:
             sample_IDs = [int(ID) for ID in f]
-        pedigree.set_samples(sample_IDs=sample_IDs, probands_only=False)
+        pedigree.set_samples(sample_IDs=sample_IDs, probands_only=True)
         num_samples = len(sample_IDs)
     elif args.num_samples is not None:
         num_samples = args.num_samples
@@ -71,13 +99,11 @@ def main(args):
     ## For testing, sometimes need to specify num_loci directly
     rm = msprime.RecombinationMap(
             [0, int(args.length)],
-            [args.rho, 0],
-            int(args.length))
+            [args.rho, 0], discrete=True)
 
     replicates = msprime.simulate(
             num_samples, Ne=args.popsize, pedigree=pedigree,
             model='wf_ped', mutation_rate=args.mu,
-            # length=args.length, recombination_rate=args.rho,
             recombination_map=rm,
             end_time=args.end_time,
             demographic_events=des, num_replicates=args.replicates)
@@ -86,7 +112,8 @@ def main(args):
     if args.replicates is None:
         ts = replicates
         if args.check_inds:
-            check_inds(ts, pedigree)
+            ts = check_inds(ts, pedigree)
+            print(sample_IDs)
         if args.outfile is not None:
             outfile = os.path.expanduser(args.outfile)
             ts.dump(outfile)
@@ -110,7 +137,7 @@ if __name__ == "__main__":
     Ind ID, Father ID, Mother ID, Time (generations in past)
 
 Simulation example:
-    python pedigree_example.py --pedfile path/to/ped_file.txt
+    python pedigree_example.py --num_samples 10 --pedfile path/to/ped_file.txt
 
 Text-to-numpy conversion example:
     python pedigree_example.py --pedfile path/to/ped_file.txt \\
@@ -162,7 +189,8 @@ Text-to-numpy conversion example:
             help="""Number of replicate simulations to perform. Default: 1""")
     parser.add_argument('-c', '--check_inds', action="store_true",
             help="""Debug option - verify all individuals IDs in the simulated
-            tree sequence are contained within the pedigree""")
+            tree sequence are contained within the pedigree, and give each
+            individual only a single mutation for each genome copy""")
     parser.add_argument('-t', '--load_times', action="store_true",
             help="""Flag to load times as 4th column of the pedigree. Without
             this flag, times are (roughly) inferred as a partial ordering of
