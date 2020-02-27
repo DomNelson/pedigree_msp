@@ -1,3 +1,4 @@
+import sys
 import os
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ class PedigreeRow:
 
     def __eq__(self, other):
         return self.row[0] == other.row[0]
-    
+
     def __hash__(self):
         return hash(self.row[0])
 
@@ -127,7 +128,6 @@ class PedFiller:
         max_time = int(np.max(self.ped_df['time']))
         max_ID = np.max(self.ped_df['ind'])
         print(max_ID)
-        printed_gen1 = False
 
         self.new_ped_rows = []
         for time in tqdm(range(max_time), desc='Drawing new connections'):
@@ -173,14 +173,9 @@ class PedFiller:
         Sorts original and new individuals into unchanged/updated/new
         categories, then combines them into a new array
         """
-        new_df = pd.DataFrame(self.new_ped_rows,
-                              columns=['ind', 'father', 'mother', 'time']
-                              ).set_index('ind').sort_index()
-        original_df = self.ped_df.set_index('ind').sort_index()
-
         new_ped_set = set([PedigreeRow(row) for row in self.new_ped_rows])
         original_ped_set = set([PedigreeRow(list(row))
-            for _, row in self.ped_df.iterrows()])
+                                for _, row in self.ped_df.iterrows()])
 
         unchanged_rows = list(original_ped_set.difference(new_ped_set))
         updated_rows = list(original_ped_set.intersection(new_ped_set))
