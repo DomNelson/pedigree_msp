@@ -100,6 +100,7 @@ def main(args):
     rm = msprime.RecombinationMap(
             [0, int(args.length)],
             [args.rho, 0], discrete=True)
+            # int(args.length))
 
     replicates = msprime.simulate(
             num_samples, Ne=args.popsize, pedigree=pedigree,
