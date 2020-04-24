@@ -116,20 +116,18 @@ def ts_to_bcf_single(ts_file, out_file, runner):
 
 
 def bcf_convert_chrom(bcf_file, chrom_num, runner):
-    tmp_conv_file = '.tmp_chr_conv.txt'
-
-    with open(tmp_conv_file, 'w') as f:
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write('1\t' + str(chrom_num) + '\n')
 
-    convert_chrom_cmd = (
-            'bcftools annotate --rename-chrs {} {} | '
-            'bcftools view -O b > tmp && mv tmp {} && '
-            'rm {}').format(
-            tmp_conv_file, bcf_file, bcf_file, tmp_conv_file)
-    runner.run(convert_chrom_cmd)
+        convert_chrom_cmd = (
+                'bcftools annotate --rename-chrs {} {} | '
+                'bcftools view -O b > tmp && mv tmp {} && '
+                'rm {}').format(
+                f.name, bcf_file, bcf_file, f.name)
+        runner.run(convert_chrom_cmd)
 
 
-def concat_bcf(bcf_files, out_file, runner, delete_originals=True):
+def concat_bcf(bcf_files, out_file, runner):
     concat_chrom_cmd = 'bcftools concat -o {} -O b --threads 2'
 
     for f in bcf_files:
@@ -139,30 +137,22 @@ def concat_bcf(bcf_files, out_file, runner, delete_originals=True):
 
     runner.run(concat_chrom_cmd)
 
-    if delete_originals:
-        rm_cmd = 'rm {}'
-        for f in bcf_files:
-            f = os.path.expanduser(f)
-            if not os.path.isabs(f):
-                f = os.path.abspath(f)
-
-            runner.run(rm_cmd.format(f))
-
 
 def main(args):
     out_file = os.path.expanduser(args.out_file)
     runner = Runner(args)
 
     tmp_bcf_files = []
-    for i, tsf in enumerate(args.ts_file):
-        chrom_num = i + 1
-        tmp_bcf_file = '.tmp' + str(i) + '.bcf'
-        tmp_bcf_files.append(tmp_bcf_file)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        for i, tsf in enumerate(args.ts_file):
+            chrom_num = i + 1
+            tmp_bcf_file = os.path.join(tmpdirname, '.tmp' + str(i) + '.bcf')
+            tmp_bcf_files.append(tmp_bcf_file)
 
-        ts_to_bcf_single(tsf, tmp_bcf_file, runner)
-        bcf_convert_chrom(tmp_bcf_file, chrom_num, runner)
+            ts_to_bcf_single(tsf, tmp_bcf_file, runner)
+            bcf_convert_chrom(tmp_bcf_file, chrom_num, runner)
 
-    concat_bcf(tmp_bcf_files, out_file, runner)
+        concat_bcf(tmp_bcf_files, out_file, runner)
 
 
 if __name__ == "__main__":
